@@ -1,0 +1,285 @@
+// CourtReach data model
+// Docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ------------------------------------------------------------------
+// Enums
+// ------------------------------------------------------------------
+
+enum SportType {
+  BADMINTON
+  TENNIS
+  PICKLEBALL
+  SQUASH
+}
+
+enum ClubStatus {
+  IMPORTED
+  DISCOVERED
+  CONTACT_FOUND
+  VERIFIED
+  UNCERTAIN
+  INVALID
+  OUT_OF_AREA
+  EMAIL_SENT
+  REPLIED
+  DEMO_BOOKED
+  SKIPPED
+}
+
+enum VerificationStatus {
+  PENDING
+  VERIFIED
+  UNCERTAIN
+  INVALID
+}
+
+enum OutreachStatus {
+  DRAFT
+  PENDING_APPROVAL
+  SCHEDULED
+  SENT
+  REPLIED
+  BOUNCED
+  FAILED
+}
+
+enum MembershipRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum CampaignStatus {
+  DRAFT
+  DISCOVERING
+  ACTIVE
+  PAUSED
+  COMPLETED
+}
+
+enum JobType {
+  DISCOVERY
+  VERIFICATION
+  OUTREACH
+  REPLY_POLL
+}
+
+enum JobStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum EmailDirection {
+  OUTBOUND
+  INBOUND
+}
+
+// ------------------------------------------------------------------
+// Identity & teams
+// ------------------------------------------------------------------
+
+model User {
+  id           String       @id @default(cuid())
+  email        String       @unique
+  name         String
+  passwordHash String
+  memberships  Membership[]
+  activities   Activity[]
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+}
+
+model Team {
+  id          String       @id @default(cuid())
+  name        String
+  memberships Membership[]
+  invites     Invite[]
+  campaigns   Campaign[]
+  template    EmailTemplate?
+  activities  Activity[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model Membership {
+  id        String         @id @default(cuid())
+  role      MembershipRole @default(MEMBER)
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  team      Team           @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  teamId    String
+  createdAt DateTime       @default(now())
+
+  @@unique([userId, teamId])
+  @@index([teamId])
+}
+
+model Invite {
+  id        String         @id @default(cuid())
+  email     String
+  role      MembershipRole @default(MEMBER)
+  token     String         @unique
+  team      Team           @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  teamId    String
+  acceptedAt DateTime?
+  expiresAt DateTime
+  createdAt DateTime       @default(now())
+
+  @@index([teamId])
+}
+
+// ------------------------------------------------------------------
+// Campaigns & pipeline
+// ------------------------------------------------------------------
+
+model Campaign {
+  id               String         @id @default(cuid())
+  name             String
+  // Region stored as JSON: { label, lat?, lng?, radiusKm? }
+  region           Json
+  sportTypes       SportType[]
+  autoSendVerified Boolean        @default(false)
+  dailySendLimit   Int            @default(30)
+  followUpDays     Int            @default(5)
+  status           CampaignStatus @default(DRAFT)
+  team             Team           @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  teamId           String
+  clubs            Club[]
+  jobs             Job[]
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@index([teamId])
+}
+
+model Club {
+  id         String     @id @default(cuid())
+  name       String
+  address    String?
+  lat        Float?
+  lng        Float?
+  sportType  SportType
+  website    String?
+  // Detected membership/billing platform, e.g. "ClubSpark"; null = unknown
+  membershipSystem String?
+  // Where this club came from, e.g. "overpass", "manual"
+  source     String     @default("overpass")
+  // External de-dupe key (e.g. OSM node id) to avoid duplicates per campaign
+  externalId String?
+  status     ClubStatus @default(DISCOVERED)
+  campaign   Campaign   @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  campaignId String
+  contacts   Contact[]
+  outreach   Outreach?
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  @@unique([campaignId, externalId])
+  @@index([campaignId, status])
+}
+
+model Contact {
+  id                 String             @id @default(cuid())
+  name               String?
+  role               String?
+  email              String?
+  phone              String?
+  linkedinUrl        String?
+  // 0..1 confidence from the verification agents
+  confidenceScore    Float?
+  verificationStatus VerificationStatus @default(PENDING)
+  reasoning          String?
+  // True for the contact chosen as the outreach target
+  isPrimary          Boolean            @default(false)
+  club               Club               @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  clubId             String
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  @@index([clubId])
+}
+
+model Outreach {
+  id        String         @id @default(cuid())
+  subject   String
+  body      String
+  status    OutreachStatus @default(DRAFT)
+  sentAt    DateTime?
+  // Provider Message-ID header, used to correlate inbound replies
+  messageId String?
+  club      Club           @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  clubId    String         @unique
+  messages  EmailMessage[]
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+}
+
+model EmailMessage {
+  id         String         @id @default(cuid())
+  direction  EmailDirection
+  subject    String?
+  body       String
+  messageId  String?
+  outreach   Outreach       @relation(fields: [outreachId], references: [id], onDelete: Cascade)
+  outreachId String
+  createdAt  DateTime       @default(now())
+
+  @@index([outreachId])
+}
+
+model EmailTemplate {
+  id        String   @id @default(cuid())
+  subject   String
+  body      String
+  demoLink  String?
+  signOff   String?
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  teamId    String   @unique
+  updatedAt DateTime @updatedAt
+}
+
+// ------------------------------------------------------------------
+// Jobs & activity feed
+// ------------------------------------------------------------------
+
+model Job {
+  id         String    @id @default(cuid())
+  type       JobType
+  status     JobStatus @default(QUEUED)
+  progress   Int       @default(0)
+  total      Int       @default(0)
+  error      String?
+  campaign   Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  campaignId String
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([campaignId])
+}
+
+model Activity {
+  id        String   @id @default(cuid())
+  // Human-readable actor: a user's name or an agent like "Verification Agent"
+  actor     String
+  action    String
+  metadata  Json?
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  teamId    String
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userId    String?
+  createdAt DateTime @default(now())
+
+  @@index([teamId, createdAt])
+}

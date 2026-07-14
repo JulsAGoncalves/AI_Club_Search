@@ -1,0 +1,26 @@
+{
+  "name": "courtreach",
+  "version": "0.1.0",
+  "private": true,
+  "description": "CourtReach - AI-powered sales outreach tool for racquet sport clubs",
+  "scripts": {
+    "dev": "pnpm --parallel --filter \"./apps/*\" dev",
+    "dev:web": "pnpm --filter @courtreach/web dev",
+    "dev:api": "pnpm --filter @courtreach/api dev",
+    "dev:worker": "pnpm --filter @courtreach/api dev:worker",
+    "build": "pnpm --filter @courtreach/shared build && pnpm --filter @courtreach/api build && pnpm --filter @courtreach/web build",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "db:generate": "pnpm --filter @courtreach/api db:generate",
+    "db:migrate": "pnpm --filter @courtreach/api db:migrate",
+    "db:studio": "pnpm --filter @courtreach/api db:studio"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "prettier": "^3.3.3",
+    "typescript": "^5.6.3"
+  },
+  "packageManager": "pnpm@11.9.0"
+}
