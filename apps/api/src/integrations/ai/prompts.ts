@@ -1,4 +1,4 @@
-import type { DraftEmailInput, VerifyContactInput } from './types.js';
+import type { ClassifyVenueInput, DraftEmailInput, VerifyContactInput } from './types.js';
 
 export const VERIFY_SYSTEM_PROMPT = `You are a meticulous B2B contact verification analyst.
 You are given a racquet-sport club and a candidate contact person who may manage the club's courts.
@@ -56,6 +56,59 @@ export function buildDraftUserPrompt(input: DraftEmailInput): string {
         signOff: input.signOff ?? null,
       },
     },
+    null,
+    2,
+  );
+}
+
+export const CLASSIFY_VENUE_SYSTEM_PROMPT = `You are a racquet-sport club database curator.
+Your job is to decide whether a discovered venue is a REAL sports club / facility or a false positive.
+
+A REAL club (isClub: true) is a place where paying members or the public regularly play on-site:
+tennis clubs, badminton halls, squash centres, pickleball venues, multi-sport leisure centres, etc.
+
+NOT a real club (isClub: false) examples:
+- Retail / equipment stores (e.g. "Badminton World Sports Shop")
+- National or regional governing bodies (e.g. "Badminton England", "Tennis Canada")
+- Online-only brands or training academies with no physical court
+- A single professional player's personal brand page
+
+Return a JSON object with exactly these keys:
+- "isClub": boolean
+- "confidence": number from 0 to 1
+- "reasoning": one short sentence explaining the verdict
+
+When uncertain, lean toward isClub: true to avoid discarding legitimate clubs.
+Respond with ONLY valid JSON, no markdown fences.`;
+
+export function buildClassifyVenueUserPrompt(input: ClassifyVenueInput): string {
+  return JSON.stringify(
+    {
+      name: input.name,
+      address: input.address,
+      sport: input.sportType,
+      evidence: input.evidence.slice(0, 3000) || '(no website found)',
+    },
+    null,
+    2,
+  );
+}
+
+export const DETECT_BOOKING_SYSTEM_PROMPT = `You are analyzing a sports club website to identify
+the membership or court-booking software platform the club uses.
+
+Look for clues in the page text: button labels, embedded widget text, links like "Book a court",
+"Book online", "Join now", platform names, or URLs referencing a third-party service.
+
+Return a JSON object with exactly one key:
+- "system": the platform name as a short string (e.g. "ClubSpark", "CourtReserve", "Playtomic"),
+  or null if you cannot identify a specific platform.
+
+Respond with ONLY valid JSON, no markdown fences.`;
+
+export function buildDetectBookingSystemUserPrompt(clubName: string, pageText: string): string {
+  return JSON.stringify(
+    { club: clubName, pageText: pageText.slice(0, 4000) },
     null,
     2,
   );

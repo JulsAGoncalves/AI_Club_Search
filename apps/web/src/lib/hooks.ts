@@ -4,15 +4,22 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
   ActivityDto,
   CampaignDto,
+  CampaignGroupDto,
   ClubDto,
   ClubStatus,
   CreateCampaignInput,
+  CreateGroupInput,
   EmailTemplateInput,
   FunnelAnalytics,
   JobDto,
   MembershipDto,
+  UpdateGroupInput,
 } from '@courtreach/shared';
 import { apiFetch } from './api';
+
+export interface CampaignGroupWithIds extends CampaignGroupDto {
+  campaignIds: string[];
+}
 
 /* Campaigns */
 
@@ -45,6 +52,59 @@ export function useDeleteCampaign() {
   return useMutation({
     mutationFn: (id: string) => apiFetch(`/campaigns/${id}`, { method: 'DELETE' }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['campaigns'] }),
+  });
+}
+
+/* Campaign Groups */
+
+export function useGroups() {
+  return useQuery({
+    queryKey: ['groups'],
+    queryFn: () => apiFetch<CampaignGroupWithIds[]>('/groups'),
+  });
+}
+
+export function useCreateGroup() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateGroupInput) =>
+      apiFetch<CampaignGroupWithIds>('/groups', { method: 'POST', body: input }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['groups'] }),
+  });
+}
+
+export function useUpdateGroup() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...input }: { id: string } & UpdateGroupInput) =>
+      apiFetch<CampaignGroupWithIds>(`/groups/${id}`, { method: 'PATCH', body: input }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['groups'] }),
+  });
+}
+
+export function useDeleteGroup() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => apiFetch(`/groups/${id}`, { method: 'DELETE' }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['groups'] });
+      qc.invalidateQueries({ queryKey: ['campaigns'] });
+    },
+  });
+}
+
+export function useSetGroupCampaigns() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ groupId, campaignIds }: { groupId: string; campaignIds: string[] }) =>
+      apiFetch<CampaignGroupWithIds>(`/groups/${groupId}/campaigns`, {
+        method: 'PUT',
+        body: { campaignIds },
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['groups'] });
+      qc.invalidateQueries({ queryKey: ['campaigns'] });
+    },
   });
 }
 

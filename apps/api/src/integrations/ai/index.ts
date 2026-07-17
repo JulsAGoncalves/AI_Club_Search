@@ -12,6 +12,14 @@ let cached: AiClient | null = null;
 export function getAiClient(): AiClient {
   if (cached) return cached;
 
+  logger.info('AI client init', {
+    provider: env.AI_PROVIDER,
+    hasOpenAiKey: !!env.OPENAI_API_KEY,
+    hasAnthropicKey: !!env.ANTHROPIC_API_KEY,
+    hasGoogleKey: !!env.GOOGLE_AI_API_KEY,
+    model: env.AI_MODEL,
+  });
+
   if (env.AI_PROVIDER === 'openai' && env.OPENAI_API_KEY) {
     cached = new OpenAiClient(env.OPENAI_API_KEY);
   } else if (env.AI_PROVIDER === 'anthropic' && env.ANTHROPIC_API_KEY) {

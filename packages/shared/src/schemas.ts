@@ -124,6 +124,25 @@ export const emailTemplateSchema = z.object({
 export type EmailTemplateInput = z.infer<typeof emailTemplateSchema>;
 
 /* ------------------------------------------------------------------ */
+/* Campaign groups                                                     */
+/* ------------------------------------------------------------------ */
+
+export const createGroupSchema = z.object({
+  name: z.string().min(1).max(80),
+});
+export type CreateGroupInput = z.infer<typeof createGroupSchema>;
+
+export const updateGroupSchema = z.object({
+  name: z.string().min(1).max(80).optional(),
+});
+export type UpdateGroupInput = z.infer<typeof updateGroupSchema>;
+
+export const setGroupCampaignsSchema = z.object({
+  campaignIds: z.array(z.string()),
+});
+export type SetGroupCampaignsInput = z.infer<typeof setGroupCampaignsSchema>;
+
+/* ------------------------------------------------------------------ */
 /* Generic helpers                                                     */
 /* ------------------------------------------------------------------ */
 

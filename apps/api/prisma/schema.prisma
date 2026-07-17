@@ -102,15 +102,16 @@ model User {
 }
 
 model Team {
-  id          String       @id @default(cuid())
-  name        String
-  memberships Membership[]
-  invites     Invite[]
-  campaigns   Campaign[]
-  template    EmailTemplate?
-  activities  Activity[]
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  id              String          @id @default(cuid())
+  name            String
+  memberships     Membership[]
+  invites         Invite[]
+  campaigns       Campaign[]
+  campaignGroups  CampaignGroup[]
+  template        EmailTemplate?
+  activities      Activity[]
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
 }
 
 model Membership {
@@ -144,6 +145,18 @@ model Invite {
 // Campaigns & pipeline
 // ------------------------------------------------------------------
 
+model CampaignGroup {
+  id        String     @id @default(cuid())
+  name      String
+  team      Team       @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  teamId    String
+  campaigns Campaign[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@index([teamId])
+}
+
 model Campaign {
   id               String         @id @default(cuid())
   name             String
@@ -156,12 +169,15 @@ model Campaign {
   status           CampaignStatus @default(DRAFT)
   team             Team           @relation(fields: [teamId], references: [id], onDelete: Cascade)
   teamId           String
+  group            CampaignGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  groupId          String?
   clubs            Club[]
   jobs             Job[]
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
 
   @@index([teamId])
+  @@index([groupId])
 }
 
 model Club {

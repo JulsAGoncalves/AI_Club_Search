@@ -7,8 +7,16 @@ import { z } from 'zod';
 const here = dirname(fileURLToPath(import.meta.url));
 // Load the repo-root .env (monorepo) first, then any local apps/api/.env override.
 const rootEnv = resolve(here, '../../../../.env');
-if (existsSync(rootEnv)) loadEnv({ path: rootEnv });
-loadEnv();
+// eslint-disable-next-line no-console
+console.log('[env] here:', here, '| rootEnv:', rootEnv, '| exists:', existsSync(rootEnv));
+// eslint-disable-next-line no-console
+console.log('[env] process.env.AI_PROVIDER before dotenv:', process.env.AI_PROVIDER);
+// override: true forces .env file values to win over any pre-set process.env values
+// (e.g. from pnpm automatic injection or stale system env vars).
+if (existsSync(rootEnv)) loadEnv({ path: rootEnv, override: true });
+loadEnv({ override: true });
+// eslint-disable-next-line no-console
+console.log('[env] process.env.AI_PROVIDER after dotenv:', process.env.AI_PROVIDER);
 
 const booleanish = z
   .union([z.boolean(), z.string()])

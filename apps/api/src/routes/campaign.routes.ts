@@ -74,9 +74,12 @@ function csvCell(value: unknown): string {
 export const campaignRouter = Router();
 campaignRouter.use(requireAuth);
 
-/** Load a campaign scoped to the caller's team, or 404. */
+/** Load a campaign (with its group) scoped to the caller's team, or 404. */
 async function getOwnedCampaign(campaignId: string, teamId: string) {
-  const campaign = await prisma.campaign.findFirst({ where: { id: campaignId, teamId } });
+  const campaign = await prisma.campaign.findFirst({
+    where: { id: campaignId, teamId },
+    include: { group: true },
+  });
   if (!campaign) throw notFound('Campaign not found');
   return campaign;
 }
@@ -88,6 +91,7 @@ campaignRouter.get(
     const campaigns = await prisma.campaign.findMany({
       where: { teamId },
       orderBy: { createdAt: 'desc' },
+      include: { group: true },
     });
     const withCounts = await Promise.all(
       campaigns.map(async (c) => toCampaignDto(c, await getStatusCounts(c.id))),

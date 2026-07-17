@@ -1,9 +1,11 @@
 import type {
   AiClient,
+  ClassifyVenueInput,
   DraftEmailInput,
   DraftEmailResult,
   VerifyContactInput,
   VerifyContactResult,
+  VenueClassification,
 } from './types.js';
 
 const GENERIC_LOCAL_PARTS = ['info', 'contact', 'admin', 'office', 'hello', 'enquiries', 'reception'];
@@ -45,6 +47,14 @@ export class FallbackAiClient implements AiClient {
         ? 'Generic inbox address; recipient may not be the decision maker.'
         : 'Email resolves but the contact role could not be confirmed.',
     };
+  }
+
+  async classifyVenue(_input: ClassifyVenueInput): Promise<VenueClassification> {
+    return { isClub: true, confidence: 0, reasoning: 'No AI configured — assuming real club.' };
+  }
+
+  async detectBookingSystem(_clubName: string, _pageText: string): Promise<string | null> {
+    return null;
   }
 
   async draftEmail(input: DraftEmailInput): Promise<DraftEmailResult> {

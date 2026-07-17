@@ -3,11 +3,14 @@ import type { SportType } from '@courtreach/shared';
 import { connection } from '../lib/redis.js';
 import { prisma } from '../lib/prisma.js';
 import { logger } from '../lib/logger.js';
+import { env } from '../config/env.js';
 import { QUEUE_NAMES, type CampaignJobData, enqueueVerification } from '../queues/index.js';
 import { getDiscoverySource } from '../integrations/discovery/index.js';
 import { geocodeRegion, geocodePlace, haversineKm } from '../integrations/discovery/geocoder.js';
 import { getContactFinder } from '../integrations/contacts/index.js';
+import { getAiClient } from '../integrations/ai/index.js';
 import { scrapeWebsite } from '../integrations/scraper/scraper.js';
+import { findClubWebsite } from '../integrations/search/website-finder.js';
 import {
   isJobCancelled,
   markJobCompleted,
@@ -16,6 +19,11 @@ import {
   setJobProgress,
 } from '../services/job.service.js';
 import { logActivity } from '../services/activity.service.js';
+
+/** True when Anthropic is configured and its web-search tool can be used. */
+function canUseWebsiteFinder(): boolean {
+  return env.AI_PROVIDER === 'anthropic' && !!env.ANTHROPIC_API_KEY;
+}
 
 function regionFromJson(region: unknown) {
   return region as { label: string; lat?: number; lng?: number; radiusKm?: number };
@@ -120,19 +128,88 @@ export function startDiscoveryWorker() {
         action: `found ${rawClubs.length} clubs for "${campaign.name}"`,
       });
 
+      const aiClient = getAiClient();
+      const useWebsiteFinder = canUseWebsiteFinder();
+
       let processed = 0;
       for (const raw of rawClubs) {
-        // Enrich: scrape the website first so we can persist the detected
-        // membership platform alongside the club, then find contacts by domain.
-        const scrape = await scrapeWebsite(raw.website);
+        // ── Step 1: Find website if OSM did not provide one ──────────────────
+        let website = raw.website;
+        if (!website && useWebsiteFinder) {
+          website = await findClubWebsite(
+            raw.name,
+            raw.address,
+            raw.sportType,
+            env.ANTHROPIC_API_KEY!,
+            env.AI_MODEL,
+          );
+        }
 
+        // ── Step 2: Scrape the website ────────────────────────────────────────
+        const scrape = await scrapeWebsite(website);
+
+        // ── Step 3: Filter out non-club venues ────────────────────────────────
+        // Only skip if the AI is highly confident (≥ 0.85) to minimise
+        // false positives. Errors default to isClub=true.
+        const venueClass = await aiClient.classifyVenue({
+          name: raw.name,
+          address: raw.address,
+          sportType: raw.sportType,
+          evidence: scrape.evidence,
+        });
+
+        if (!venueClass.isClub && venueClass.confidence >= 0.85) {
+          logger.info(`Skipping "${raw.name}" — not a club: ${venueClass.reasoning}`);
+          logActivity({
+            teamId: campaign.teamId,
+            actor: 'Discovery Agent',
+            action: `skipped "${raw.name}" — not a club: ${venueClass.reasoning}`,
+          });
+          await prisma.club.upsert({
+            where: { campaignId_externalId: { campaignId, externalId: raw.externalId } },
+            update: { status: 'SKIPPED' },
+            create: {
+              campaignId,
+              externalId: raw.externalId,
+              name: raw.name,
+              address: raw.address,
+              lat: raw.lat,
+              lng: raw.lng,
+              sportType: raw.sportType,
+              website,
+              source: raw.source,
+              status: 'SKIPPED',
+            },
+          });
+          processed += 1;
+          await setJobProgress(jobId, processed);
+          await job.updateProgress(Math.round((processed / rawClubs.length) * 100));
+          if (await isJobCancelled(jobId)) {
+            logger.info(`Discovery job ${jobId} cancelled after processing ${processed} clubs`);
+            return { clubs: processed, cancelled: true };
+          }
+          continue;
+        }
+
+        // ── Step 4: Detect booking/membership platform ────────────────────────
+        // Pattern matching runs first (fast, free); fall back to AI when the
+        // scrape yielded text but no pattern matched.
+        let membershipSystem = scrape.membershipSystem;
+        if (!membershipSystem && scrape.evidence) {
+          membershipSystem = await aiClient.detectBookingSystem(raw.name, scrape.evidence);
+          if (membershipSystem) {
+            logger.debug(`AI detected booking system "${membershipSystem}" for "${raw.name}"`);
+          }
+        }
+
+        // ── Step 5: Upsert club ───────────────────────────────────────────────
         const club = await prisma.club.upsert({
           where: { campaignId_externalId: { campaignId, externalId: raw.externalId } },
           update: {
             name: raw.name,
             address: raw.address,
-            website: raw.website,
-            membershipSystem: scrape.membershipSystem,
+            website,
+            membershipSystem,
           },
           create: {
             campaignId,
@@ -142,13 +219,14 @@ export function startDiscoveryWorker() {
             lat: raw.lat,
             lng: raw.lng,
             sportType: raw.sportType,
-            website: raw.website,
-            membershipSystem: scrape.membershipSystem,
+            website,
+            membershipSystem,
             source: raw.source,
             status: 'DISCOVERED',
           },
         });
 
+        // ── Step 6: Find contacts ─────────────────────────────────────────────
         const candidates = [];
 
         if (finder && scrape.domain) {

@@ -13,9 +13,23 @@ export interface ScrapeResult {
 }
 
 const EMAIL_REGEX = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
-const CANDIDATE_PATHS = ['', '/contact', '/contact-us', '/about', '/about-us', '/staff', '/team'];
+const CANDIDATE_PATHS = [
+  '',
+  '/contact',
+  '/contact-us',
+  '/about',
+  '/about-us',
+  '/staff',
+  '/team',
+  '/book',
+  '/booking',
+  '/book-a-court',
+  '/join',
+  '/members',
+  '/membership',
+];
 const FETCH_TIMEOUT_MS = 8000;
-const MAX_PAGES = 4;
+const MAX_PAGES = 5;
 
 function normalizeUrl(website: string): URL | null {
   try {

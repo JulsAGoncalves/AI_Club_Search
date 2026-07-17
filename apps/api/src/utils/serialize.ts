@@ -1,6 +1,7 @@
 import type {
   Activity,
   Campaign,
+  CampaignGroup,
   Club,
   Contact,
   EmailMessage,
@@ -19,7 +20,10 @@ import type {
   SportType,
 } from '@courtreach/shared';
 
-export function toCampaignDto(c: Campaign, counts?: CampaignDto['counts']): CampaignDto {
+export function toCampaignDto(
+  c: Campaign & { group?: CampaignGroup | null },
+  counts?: CampaignDto['counts'],
+): CampaignDto {
   return {
     id: c.id,
     name: c.name,
@@ -29,6 +33,8 @@ export function toCampaignDto(c: Campaign, counts?: CampaignDto['counts']): Camp
     dailySendLimit: c.dailySendLimit,
     followUpDays: c.followUpDays,
     status: c.status,
+    groupId: c.groupId ?? null,
+    groupName: c.group?.name ?? null,
     createdAt: c.createdAt.toISOString(),
     counts,
   };

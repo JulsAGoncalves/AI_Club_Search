@@ -42,6 +42,12 @@ export interface AuthResponse {
   role: MembershipRole;
 }
 
+export interface CampaignGroupDto {
+  id: string;
+  name: string;
+  createdAt: string;
+}
+
 export interface CampaignDto {
   id: string;
   name: string;
@@ -51,6 +57,8 @@ export interface CampaignDto {
   dailySendLimit: number;
   followUpDays: number;
   status: CampaignStatus;
+  groupId: string | null;
+  groupName: string | null;
   createdAt: string;
   counts?: ClubStatusCounts;
 }
