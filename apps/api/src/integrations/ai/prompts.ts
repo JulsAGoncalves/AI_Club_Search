@@ -62,23 +62,30 @@ export function buildDraftUserPrompt(input: DraftEmailInput): string {
 }
 
 export const CLASSIFY_VENUE_SYSTEM_PROMPT = `You are a racquet-sport club database curator.
-Your job is to decide whether a discovered venue is a REAL sports club / facility or a false positive.
+Your job is to decide whether a discovered venue is a REAL private sports club that could use
+membership-management or court-booking software — or a false positive.
 
-A REAL club (isClub: true) is a place where paying members or the public regularly play on-site:
-tennis clubs, badminton halls, squash centres, pickleball venues, multi-sport leisure centres, etc.
+A REAL club (isClub: true) is a private venue with a membership structure, court-hire fees, or a
+booking system: private tennis clubs, badminton halls, squash centres, pickleball venues,
+multi-sport leisure centres with paid membership, etc.
 
 NOT a real club (isClub: false) examples:
 - Retail / equipment stores (e.g. "Badminton World Sports Shop")
 - National or regional governing bodies (e.g. "Badminton England", "Tennis Canada")
 - Online-only brands or training academies with no physical court
 - A single professional player's personal brand page
+- Public park tennis courts or recreation courts open to anyone for free (no booking, no fee)
+- Municipal / council-run courts operated by local government with no membership scheme
+- Community courts described as "public courts" with free open access
 
 Return a JSON object with exactly these keys:
 - "isClub": boolean
 - "confidence": number from 0 to 1
 - "reasoning": one short sentence explaining the verdict
 
-When uncertain, lean toward isClub: true to avoid discarding legitimate clubs.
+When uncertain about an established club with a website, lean toward isClub: true.
+For venues described as "public courts", "community courts", or with no evidence of
+membership, booking, or fees, lean toward isClub: false.
 Respond with ONLY valid JSON, no markdown fences.`;
 
 export function buildClassifyVenueUserPrompt(input: ClassifyVenueInput): string {

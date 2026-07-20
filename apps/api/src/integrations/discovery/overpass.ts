@@ -61,6 +61,36 @@ function buildAddress(tags: Record<string, string>): string | null {
   return parts.length ? parts.join(', ') : null;
 }
 
+/**
+ * Returns true for venues that are almost certainly public/municipal courts
+ * with no membership structure — useless for club-management software outreach.
+ *
+ * Checked in order of reliability:
+ *  1. `leisure=pitch` — OSM standard for an open outdoor playing surface
+ *     (park courts, school pitches). Private clubs are tagged sports_centre or
+ *     similar, not pitch.
+ *  2. `operator:type` — government / public / municipal operator signals a
+ *     council-run facility.
+ *  3. `access=public` — explicitly tagged as freely accessible public
+ *     infrastructure. (`access=yes` is intentionally excluded; it is too
+ *     common on legitimate private clubs where it simply means "open/findable"
+ *     and would cause false drops.)
+ */
+function isLikelyPublicCourt(tags: Record<string, string>): boolean {
+  if (tags.leisure === 'pitch') return true;
+
+  const opType = (tags['operator:type'] ?? '').toLowerCase();
+  if (['public', 'government', 'municipal'].includes(opType)) return true;
+
+  // Only drop on explicit `access=public` — mappers use this specifically for
+  // freely accessible public infrastructure. `access=yes` is too common on
+  // legitimate private clubs (it just means "open/findable") and would cause
+  // too many false drops.
+  if ((tags.access ?? '').toLowerCase() === 'public') return true;
+
+  return false;
+}
+
 /** Split the `sport=*` tag into normalized, lower-case tokens. */
 function sportTokens(tags: Record<string, string>): string[] {
   return (tags.sport ?? '')
@@ -192,6 +222,10 @@ export class OverpassDiscoverySource implements DiscoverySource {
       const tags = el.tags ?? {};
       const name = tags.name?.trim();
       if (!name) continue; // unnamed courts are not useful for outreach
+
+      // Drop public/municipal/community courts — they have no membership
+      // structure and would never use club-management software.
+      if (isLikelyPublicCourt(tags)) continue;
 
       // Require a matching racquet sport tag (or a name-inferred generic one).
       const sportType = pickSportType(tags, name, sportTypes);
