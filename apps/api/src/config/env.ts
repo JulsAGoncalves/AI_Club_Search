@@ -41,7 +41,15 @@ const envSchema = z.object({
   AI_MODEL: z.string().default('gpt-4o-mini'),
 
   HUNTER_API_KEY: z.string().optional(),
-  OVERPASS_URL: z.string().default('https://overpass-api.de/api/interpreter'),
+  OVERPASS_URLS: z
+    .string()
+    .default(
+      'https://overpass-api.de/api/interpreter,' +
+        'https://overpass.kumi.systems/api/interpreter,' +
+        'https://maps.mail.ru/osm/tools/overpass/api/interpreter,' +
+        'https://overpass.openstreetmap.ru/api/interpreter',
+    )
+    .transform((v) => v.split(',').map((u) => u.trim()).filter(Boolean)),
   NOMINATIM_URL: z.string().default('https://nominatim.openstreetmap.org/search'),
 
   SMTP_HOST: z.string().optional(),

@@ -136,39 +136,59 @@ export class OverpassDiscoverySource implements DiscoverySource {
     logger.info('Overpass query', { region: region.label, sportTypes });
 
     const body = new URLSearchParams({ data: query }).toString();
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 120_000);
-    let res: Response;
-    try {
-      res = await fetch(env.OVERPASS_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'Accept': 'application/json',
-          'User-Agent': 'CourtReach/1.0',
-        },
-        body,
-        signal: controller.signal,
-      });
-    } catch (err) {
-      if ((err as Error).name === 'AbortError') {
-        throw new Error('Overpass request timed out after 120 s');
+    let lastError: Error | undefined;
+    let data: OverpassResponse | undefined;
+
+    for (const url of env.OVERPASS_URLS) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 120_000);
+      let res: Response;
+      try {
+        res = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Accept': 'application/json',
+            'User-Agent': 'CourtReach/1.0',
+          },
+          body,
+          signal: controller.signal,
+        });
+      } catch (err) {
+        if ((err as Error).name === 'AbortError') {
+          logger.warn('Overpass mirror timed out, trying next', { url });
+          lastError = new Error(`Overpass mirror timed out: ${url}`);
+          continue;
+        }
+        throw err;
+      } finally {
+        clearTimeout(timeout);
       }
-      throw err;
-    } finally {
-      clearTimeout(timeout);
+
+      if (res.status === 429 || res.status >= 500) {
+        logger.warn('Overpass mirror unavailable, trying next', { url, status: res.status });
+        lastError = new Error(`Overpass mirror returned HTTP ${res.status}: ${url}`);
+        continue;
+      }
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        throw new Error(`Overpass request failed (${res.status}): ${text.slice(0, 200)}`);
+      }
+
+      data = (await res.json()) as OverpassResponse;
+      break;
     }
 
-    if (!res.ok) {
-      const text = await res.text().catch(() => '');
-      throw new Error(`Overpass request failed (${res.status}): ${text.slice(0, 200)}`);
+    if (!data) {
+      throw lastError ?? new Error('All Overpass mirrors failed');
     }
 
-    const data = (await res.json()) as OverpassResponse;
+    const parsedData = data;
     const seen = new Set<string>();
     const clubs: RawClub[] = [];
 
-    for (const el of data.elements) {
+    for (const el of parsedData.elements) {
       const tags = el.tags ?? {};
       const name = tags.name?.trim();
       if (!name) continue; // unnamed courts are not useful for outreach
