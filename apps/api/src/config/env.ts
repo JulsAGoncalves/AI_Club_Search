@@ -41,6 +41,10 @@ const envSchema = z.object({
   AI_MODEL: z.string().default('gpt-4o-mini'),
 
   HUNTER_API_KEY: z.string().optional(),
+
+  DISCOVERY_SOURCE: z.enum(['overpass', 'google']).default('overpass'),
+  GOOGLE_PLACES_API_KEY: z.string().optional(),
+
   OVERPASS_URLS: z
     .string()
     .default(

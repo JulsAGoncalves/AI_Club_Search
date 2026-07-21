@@ -1,0 +1,34 @@
+# Dependencies
+node_modules
+.pnpm-store
+**/node_modules
+
+# Build artifacts
+**/.next
+**/dist
+**/*.tsbuildinfo
+
+# Environment files (secrets never go in the image)
+.env
+.env.local
+**/.env.local
+**/.env.*.local
+
+# Logs
+*.log
+**/debug-*.log
+
+# Git
+.git
+.gitignore
+
+# Docs / scripts (not needed at runtime)
+README.md
+scripts/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+.cursor/
