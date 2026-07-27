@@ -1,5 +1,6 @@
 import type { Region, SportType } from '@courtreach/shared';
 import { logger } from '../../lib/logger.js';
+import { haversineKm } from './geocoder.js';
 import type { DiscoverySource, RawClub } from './types.js';
 
 /**
@@ -23,11 +24,19 @@ const PUBLIC_COURT_PATTERNS = [
   /\bmunicipal\b/i,
   /\brecreation cent(re|er)\b/i,
   /\bcommunity cent(re|er)\b/i,
+  /\bcommunity league\b/i,
   /\bpublic court/i,
   /\bschool\b/i,
   /\buniversity\b/i,
   /\bcollege\b/i,
   /\bcouncil\b/i,
+  /\bsports association\b/i,
+  /\brecreation commission\b/i,
+  /\brecreation department\b/i,
+  /\bneighbourhood\b/i,
+  /\bneighborhood\b/i,
+  /\bleisure cent(re|er)\b/i,
+  /\bsports complex\b/i,
 ];
 
 function isLikelyPublicVenue(name: string): boolean {
@@ -176,6 +185,18 @@ export class GooglePlacesDiscoverySource implements DiscoverySource {
 
           const lat = place.location?.latitude ?? null;
           const lng = place.location?.longitude ?? null;
+
+          // Hard-drop any result Google returned outside the search radius.
+          // locationBias is only a hint and can return distant results when
+          // local supply is sparse; this enforces the actual boundary.
+          if (
+            lat != null &&
+            lng != null &&
+            haversineKm(geocodedRegion.lat, geocodedRegion.lng, lat, lng) > geocodedRegion.radiusKm
+          ) {
+            logger.debug(`Dropping out-of-radius result "${name}" from Google Places`);
+            continue;
+          }
 
           clubs.push({
             externalId: place.id,
