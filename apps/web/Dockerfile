@@ -6,7 +6,7 @@
 # NOTE: NEXT_PUBLIC_API_URL is baked into the client bundle at build time.
 # Deploy the API service first, copy its App Runner URL, then build this image.
 
-FROM node:20-alpine
+FROM node:22-alpine
 WORKDIR /app
 
 ENV NEXT_TELEMETRY_DISABLED=1

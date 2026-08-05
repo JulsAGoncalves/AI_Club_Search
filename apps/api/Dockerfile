@@ -1,7 +1,7 @@
 # Build context must be the monorepo root:
 #   docker build -f apps/api/Dockerfile -t courtreach-api .
 
-FROM node:20-alpine
+FROM node:22-alpine
 WORKDIR /app
 
 # Enable pnpm via corepack (matches packageManager in root package.json)
