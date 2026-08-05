@@ -30,8 +30,9 @@ app.use('/api', apiRouter);
 app.use(notFoundHandler);
 app.use(errorHandler);
 
-const server = app.listen(env.API_PORT, () => {
-  logger.info(`CourtReach API listening on http://localhost:${env.API_PORT}`);
+const port = env.PORT ?? env.API_PORT;
+const server = app.listen(port, () => {
+  logger.info(`CourtReach API listening on http://localhost:${port}`);
 });
 
 process.on('SIGTERM', () => server.close(() => process.exit(0)));

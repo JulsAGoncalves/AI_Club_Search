@@ -28,6 +28,8 @@ const envSchema = z.object({
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
   REDIS_URL: z.string().default('redis://localhost:6379'),
 
+  // Railway injects PORT; fall back to API_PORT, then 4000
+  PORT: z.coerce.number().optional(),
   API_PORT: z.coerce.number().default(4000),
   WEB_ORIGIN: z.string().default('http://localhost:3000'),
 
