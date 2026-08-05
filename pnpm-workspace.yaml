@@ -3,19 +3,13 @@ packages:
   - "packages/*"
 
 onlyBuiltDependencies:
+  - "@google/genai"
   - "@prisma/client"
   - "@prisma/engines"
-  - prisma
   - esbuild
   - msgpackr-extract
+  - prisma
+  - protobufjs
 
 overrides:
   ioredis: 5.11.1
-allowBuilds:
-  '@google/genai': set this to true or false
-  '@prisma/client': set this to true or false
-  '@prisma/engines': set this to true or false
-  esbuild: set this to true or false
-  msgpackr-extract: set this to true or false
-  prisma: set this to true or false
-  protobufjs: set this to true or false
