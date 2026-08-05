@@ -4,7 +4,7 @@ import { asyncHandler } from '../utils/errors.js';
 import { prisma } from '../lib/prisma.js';
 import { toActivityDto } from '../utils/serialize.js';
 
-export const activityRouter = Router();
+export const activityRouter: Router = Router();
 activityRouter.use(requireAuth);
 
 activityRouter.get(

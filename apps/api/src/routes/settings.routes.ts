@@ -6,7 +6,7 @@ import { asyncHandler } from '../utils/errors.js';
 import { prisma } from '../lib/prisma.js';
 import { integrations } from '../config/env.js';
 
-export const settingsRouter = Router();
+export const settingsRouter: Router = Router();
 settingsRouter.use(requireAuth);
 
 const DEFAULT_TEMPLATE = {

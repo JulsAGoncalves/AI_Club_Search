@@ -5,7 +5,7 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 import cors from 'cors';
-import express from 'express';
+import express, { type Application } from 'express';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import { env } from './config/env.js';
@@ -13,7 +13,7 @@ import { logger } from './lib/logger.js';
 import { apiRouter } from './routes/index.js';
 import { errorHandler, notFoundHandler } from './middleware/error.js';
 
-const app = express();
+const app: Application = express();
 
 app.use(helmet());
 app.use(

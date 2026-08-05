@@ -13,7 +13,7 @@ import { enqueueOutreach } from '../queues/index.js';
 import { logActivity } from '../services/activity.service.js';
 import { toClubDto } from '../utils/serialize.js';
 
-export const clubRouter = Router();
+export const clubRouter: Router = Router();
 clubRouter.use(requireAuth);
 
 /** Load a club and assert it belongs to the caller's team. */

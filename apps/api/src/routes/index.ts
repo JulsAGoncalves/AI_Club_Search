@@ -7,7 +7,7 @@ import { clubRouter } from './club.routes.js';
 import { activityRouter } from './activity.routes.js';
 import { settingsRouter } from './settings.routes.js';
 
-export const apiRouter = Router();
+export const apiRouter: Router = Router();
 
 apiRouter.get('/health', (_req, res) => res.json({ ok: true }));
 apiRouter.use('/auth', authRouter);

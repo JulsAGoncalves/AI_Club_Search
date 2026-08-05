@@ -6,7 +6,7 @@ import { asyncHandler } from '../utils/errors.js';
 import { prisma } from '../lib/prisma.js';
 import { createInvite } from '../services/auth.service.js';
 
-export const teamRouter = Router();
+export const teamRouter: Router = Router();
 teamRouter.use(requireAuth);
 
 teamRouter.get(

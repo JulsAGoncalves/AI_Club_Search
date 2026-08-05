@@ -24,8 +24,8 @@ COPY packages/shared ./packages/shared
 COPY apps/api ./apps/api
 
 RUN pnpm --filter @courtreach/shared build && \
-    pnpm --filter @courtreach/api build && \
-    pnpm --filter @courtreach/api exec prisma generate
+    pnpm --filter @courtreach/api exec prisma generate && \
+    pnpm --filter @courtreach/api build
 
 RUN chmod +x /app/apps/api/start.sh
 

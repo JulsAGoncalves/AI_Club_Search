@@ -6,7 +6,7 @@ import { asyncHandler, notFound } from '../utils/errors.js';
 import { prisma } from '../lib/prisma.js';
 import { logActivity } from '../services/activity.service.js';
 
-export const groupRouter = Router();
+export const groupRouter: Router = Router();
 groupRouter.use(requireAuth);
 
 async function getOwnedGroup(groupId: string, teamId: string) {

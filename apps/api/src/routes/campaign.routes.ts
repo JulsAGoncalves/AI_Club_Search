@@ -71,7 +71,7 @@ function csvCell(value: unknown): string {
   return str;
 }
 
-export const campaignRouter = Router();
+export const campaignRouter: Router = Router();
 campaignRouter.use(requireAuth);
 
 /** Load a campaign (with its group) scoped to the caller's team, or 404. */

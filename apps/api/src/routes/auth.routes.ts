@@ -6,7 +6,7 @@ import { asyncHandler } from '../utils/errors.js';
 import { prisma } from '../lib/prisma.js';
 import { acceptInvite, login, register } from '../services/auth.service.js';
 
-export const authRouter = Router();
+export const authRouter: Router = Router();
 
 authRouter.post(
   '/register',
