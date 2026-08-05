@@ -4,6 +4,9 @@
 FROM node:22-alpine
 WORKDIR /app
 
+# Prisma's query engine requires OpenSSL on Alpine (musl-based)
+RUN apk add --no-cache openssl
+
 # Enable pnpm via corepack (matches packageManager in root package.json)
 RUN corepack enable && corepack prepare pnpm@11.9.0 --activate
 
